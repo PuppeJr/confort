@@ -1,0 +1,13 @@
+{
+  "background_color": "#8bbff3",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "confort-chi.vercel",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "confort-chi.vercel",
+  "start_url": "/",
+  "theme_color": "#0b4ca6",
+  "id": "br.com.vercel.conforto",
+  "description": "\"Aplicativo para avaliação e recomendação do formato ideal de óculos de acordo com o formato do rosto.\""
+}

@@ -1,53 +1,270 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.svg">
+    <meta name="theme-color" content="#2b6cb0">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch((error) => console.error('Falha ao registrar o Service Worker:', error));
+            });
+        }
+    </script>
+
     <title>Compatibilidade Armação-Receita - Análise de Conforto</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; padding: 15px; color: #2d3748; }
-        .container { max-width: 750px; margin: auto; background: white; padding: 25px 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-        h1 { text-align: center; margin-bottom: 4px; color: #1a365d; font-size: 1.6rem; }
-        .subtitle { text-align: center; margin-bottom: 20px; color: #4a5568; font-size: 0.9rem; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        .overall-status { text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; }
-        .overall-compatible { background: #c6f6d5; color: #22543d; border: 2px solid #48bb78; }
-        .overall-attention { background: #fefcbf; color: #744210; border: 2px solid #ecc94b; }
-        .overall-incompatible { background: #fed7d7; color: #742a2a; border: 2px solid #fc8181; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            padding: 15px;
+            color: #2d3748;
+        }
 
-        .comfort-section { text-align: center; margin: 25px 0; padding: 20px; background: #f7fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .comfort-label { font-size: 1rem; color: #2d3748; margin-bottom: 8px; }
-        .comfort-scale { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 10px 0; }
-        .comfort-bar { width: 100%; max-width: 400px; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative; }
-        .comfort-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease, background 0.5s ease; }
-        .comfort-value { font-size: 2.5rem; font-weight: bold; margin-left: 12px; }
-        .comfort-desc { font-size: 0.9rem; margin-top: 6px; color: #4a5568; }
+        .container {
+            max-width: 750px;
+            margin: auto;
+            background: white;
+            padding: 25px 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
 
-        fieldset { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 18px; background: #fafafa; }
-        legend { font-weight: 700; padding: 0 8px; color: #1a365d; }
-        .row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
-        .field { flex: 1 1 180px; min-width: 140px; }
-        label { display: block; margin-bottom: 2px; font-size: 0.82rem; color: #4a5568; font-weight: 600; }
-        small { font-weight: normal; color: #718096; }
-        input, select { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; background: white; }
-        button { display: block; width: 100%; padding: 14px; background: #2b6cb0; color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin: 10px 0 20px; transition: background 0.2s; }
-        button:hover { background: #2c5282; }
+        h1 {
+            text-align: center;
+            margin-bottom: 4px;
+            color: #1a365d;
+            font-size: 1.6rem;
+        }
 
-        .result { background: #fff; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0; }
-        .result h2 { margin-bottom: 12px; color: #1a365d; font-size: 1.2rem; }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
 
-        .alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid; }
-        .alert-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-        .alert-text { font-size: 0.9rem; line-height: 1.45; }
-        .alert-ok { background: #f0fff4; border-color: #48bb78; }
-        .alert-warning { background: #fffff0; border-color: #ecc94b; }
-        .alert-error { background: #fff5f5; border-color: #fc8181; }
+        .overall-status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
 
-        .details-box { margin-top: 15px; padding: 12px; background: #edf2f7; border-radius: 8px; font-size: 0.82rem; color: #4a5568; line-height: 1.6; }
-        .details-box strong { color: #2d3748; }
+        .overall-compatible {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #48bb78;
+        }
+
+        .overall-attention {
+            background: #fefcbf;
+            color: #744210;
+            border: 2px solid #ecc94b;
+        }
+
+        .overall-incompatible {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #fc8181;
+        }
+
+        .comfort-section {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .comfort-label {
+            font-size: 1rem;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .comfort-scale {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin: 10px 0;
+        }
+
+        .comfort-bar {
+            width: 100%;
+            max-width: 400px;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .comfort-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        .comfort-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-left: 12px;
+        }
+
+        .comfort-desc {
+            font-size: 0.9rem;
+            margin-top: 6px;
+            color: #4a5568;
+        }
+
+        fieldset {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 18px;
+            background: #fafafa;
+        }
+
+        legend {
+            font-weight: 700;
+            padding: 0 8px;
+            color: #1a365d;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .field {
+            flex: 1 1 180px;
+            min-width: 140px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.82rem;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        small {
+            font-weight: normal;
+            color: #718096;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0 20px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2c5282;
+        }
+
+        .result {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .result h2 {
+            margin-bottom: 12px;
+            color: #1a365d;
+            font-size: 1.2rem;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 5px solid;
+        }
+
+        .alert-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .alert-text {
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .alert-ok {
+            background: #f0fff4;
+            border-color: #48bb78;
+        }
+
+        .alert-warning {
+            background: #fffff0;
+            border-color: #ecc94b;
+        }
+
+        .alert-error {
+            background: #fff5f5;
+            border-color: #fc8181;
+        }
+
+        .details-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .details-box strong {
+            color: #2d3748;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🕶️ Compatibilidade & Conforto</h1>
@@ -132,13 +349,18 @@
                 </div>
             </fieldset>
 
-            <button type="button" onclick="analisar()">🔍 Analisar Compatibilidade e Conforto</button>
+            <button type="submit">🔍 Analisar Compatibilidade e Conforto</button>
         </form>
 
         <div id="resultado"></div>
     </div>
 
     <script>
+        document.getElementById('compatibilityForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            analisar();
+        });
+
         function estimar_espessura(potencia_total, diametro, indice) {
             const r = diametro / 2;
             const potencia = Math.abs(potencia_total);
@@ -149,7 +371,8 @@
 
         function calcular_magnificacao(potencia_esferica, distancia_vertice_mm) {
             const d = distancia_vertice_mm / 1000;
-            return 1 / (1 - d * potencia_esferica);
+            const denominador = 1 - d * potencia_esferica;
+            return Math.abs(denominador) < Number.EPSILON ? NaN : 1 / denominador;
         }
 
         function analisar() {
@@ -165,6 +388,19 @@
             const tipo_aro = document.getElementById('tipo_aro').value;
             const angulo_panto = parseFloat(document.getElementById('angulo_panto').value) || 0;
 
+            const valoresObrigatorios = [
+                esfera, dnp_paciente, dist_vertice, indice, largura_lente, ponte, altura_lente
+            ];
+            const valoresInvalidos = valoresObrigatorios.some(valor => !Number.isFinite(valor));
+            const resultado = document.getElementById('resultado');
+            if (valoresInvalidos || dnp_paciente <= 0 || dist_vertice < 0 ||
+                largura_lente <= 0 || ponte < 0 || altura_lente <= 0 ||
+                indice <= 1 || angulo_panto < 0 || angulo_panto > 25) {
+                resultado.innerHTML =
+                    '<div class="overall-status overall-incompatible">Confira os campos preenchidos e informe valores válidos.</div>';
+                return;
+            }
+
             const potencia_total = Math.abs(esfera) + Math.abs(cilindro);
             const diametro = largura_lente;
             const espessura = estimar_espessura(potencia_total, diametro, indice);
@@ -173,6 +409,12 @@
             const diametro_minimo = diametro + 2 * Math.abs(decentracao);
             const magnificacao = calcular_magnificacao(esfera, dist_vertice);
 
+            if (!Number.isFinite(magnificacao)) {
+                resultado.innerHTML =
+                    '<div class="overall-status overall-incompatible">A combinação de grau e distância olho–lente não permite calcular a magnificação.</div>';
+                return;
+            }
+
             let alertas = [];
             let pontosConforto = 10;
             let motivosPerda = [];
@@ -180,81 +422,138 @@
             // ---- REGRA 1: Espessura x Tipo de aro ----
             if (tipo_aro === 'fechado') {
                 if (espessura > 4.5) {
-                    alertas.push({ texto: `Lentes grossas (${espessura.toFixed(1)} mm) para este aro. Escolha índice maior ou aro mais robusto.`, tipo: 'error' });
+                    alertas.push({
+                        texto: `Lentes grossas (${espessura.toFixed(1)} mm) para este aro. Escolha índice maior ou aro mais robusto.`,
+                        tipo: 'error'
+                    });
                     pontosConforto -= 3;
                     motivosPerda.push('lentes grossas para o aro');
                 } else if (espessura > 3.0) {
-                    alertas.push({ texto: `Espessura perceptível (${espessura.toFixed(1)} mm). Um índice mais alto reduziria.`, tipo: 'warning' });
+                    alertas.push({
+                        texto: `Espessura perceptível (${espessura.toFixed(1)} mm). Um índice mais alto reduziria.`,
+                        tipo: 'warning'
+                    });
                     pontosConforto -= 1;
                     motivosPerda.push('espessura levemente perceptível');
                 } else {
-                    alertas.push({ texto: `Espessura adequada (${espessura.toFixed(1)} mm) para esta armação.`, tipo: 'ok' });
+                    alertas.push({
+                        texto: `Espessura adequada (${espessura.toFixed(1)} mm) para esta armação.`,
+                        tipo: 'ok'
+                    });
                 }
             } else if (tipo_aro === 'rimless') {
                 if (espessura < 1.5) {
-                    alertas.push({ texto: `Lente fina demais (${espessura.toFixed(1)} mm) para furação – risco de trinca.`, tipo: 'error' });
+                    alertas.push({
+                        texto: `Lente fina demais (${espessura.toFixed(1)} mm) para furação – risco de trinca.`,
+                        tipo: 'error'
+                    });
                     pontosConforto -= 4;
                     motivosPerda.push('risco de quebra na armação sem aro');
                 } else if (potencia_total > 6) {
-                    alertas.push({ texto: `Grau alto (${potencia_total.toFixed(1)} D) deixa bordas aparentes em armação sem aro.`, tipo: 'warning' });
+                    alertas.push({
+                        texto: `Grau alto (${potencia_total.toFixed(1)} D) deixa bordas aparentes em armação sem aro.`,
+                        tipo: 'warning'
+                    });
                     pontosConforto -= 2;
                     motivosPerda.push('bordas aparentes em grau alto');
                 } else {
-                    alertas.push({ texto: `Espessura compatível com armação rimless.`, tipo: 'ok' });
+                    alertas.push({
+                        texto: `Espessura compatível com armação rimless.`,
+                        tipo: 'ok'
+                    });
                 }
             } else { // semiaberto
                 if (espessura < 1.2) {
-                    alertas.push({ texto: `Lente muito fina (${espessura.toFixed(1)} mm) – difícil fixação no fio.`, tipo: 'warning' });
+                    alertas.push({
+                        texto: `Lente muito fina (${espessura.toFixed(1)} mm) – difícil fixação no fio.`,
+                        tipo: 'warning'
+                    });
                     pontosConforto -= 2;
                     motivosPerda.push('dificuldade de montagem no fio');
                 } else {
-                    alertas.push({ texto: `Espessura compatível com armação semiaberta.`, tipo: 'ok' });
+                    alertas.push({
+                        texto: `Espessura compatível com armação semiaberta.`,
+                        tipo: 'ok'
+                    });
                 }
             }
 
             // ---- REGRA 2: Diâmetro mínimo do bloco (decentração) ----
             if (diametro_minimo > 70) {
-                alertas.push({ texto: `A distância entre pupilas não combina bem com esta armação. Será necessário bloco especial (mais caro).`, tipo: 'warning' });
+                alertas.push({
+                    texto: `A distância entre pupilas não combina bem com esta armação. Será necessário bloco especial (mais caro).`,
+                    tipo: 'warning'
+                });
                 pontosConforto -= 2;
                 motivosPerda.push('descentralização da armação');
             } else {
-                alertas.push({ texto: `Centralização adequada na armação.`, tipo: 'ok' });
+                alertas.push({
+                    texto: `Centralização adequada na armação.`,
+                    tipo: 'ok'
+                });
             }
 
             // ---- REGRA 3: Magnificação estética ----
             if (esfera < -4.0) {
                 const reducao = ((1 - magnificacao) * 100).toFixed(0);
-                alertas.push({ texto: `Seus olhos parecerão cerca de ${reducao}% menores.`, tipo: 'warning' });
+                alertas.push({
+                    texto: `Seus olhos parecerão cerca de ${reducao}% menores.`,
+                    tipo: 'warning'
+                });
                 pontosConforto -= 1;
                 motivosPerda.push('redução estética dos olhos');
             } else if (esfera > +4.0) {
                 const ampliacao = ((magnificacao - 1) * 100).toFixed(0);
-                alertas.push({ texto: `Seus olhos parecerão cerca de ${ampliacao}% maiores.`, tipo: 'warning' });
+                alertas.push({
+                    texto: `Seus olhos parecerão cerca de ${ampliacao}% maiores.`,
+                    tipo: 'warning'
+                });
                 pontosConforto -= 1;
                 motivosPerda.push('ampliação estética dos olhos');
             } else if (esfera >= -4.0 && esfera <= -3.0) {
-                alertas.push({ texto: `Alteração estética muito leve (olhos levemente menores).`, tipo: 'ok' });
+                alertas.push({
+                    texto: `Alteração estética muito leve (olhos levemente menores).`,
+                    tipo: 'ok'
+                });
             } else if (esfera >= +3.0 && esfera <= +4.0) {
-                alertas.push({ texto: `Alteração estética muito leve (olhos levemente maiores).`, tipo: 'ok' });
+                alertas.push({
+                    texto: `Alteração estética muito leve (olhos levemente maiores).`,
+                    tipo: 'ok'
+                });
             } else {
-                alertas.push({ texto: `Aparência natural dos olhos preservada.`, tipo: 'ok' });
+                alertas.push({
+                    texto: `Aparência natural dos olhos preservada.`,
+                    tipo: 'ok'
+                });
             }
 
             // ---- REGRA 4: Multifocal: altura e curvatura ----
             if (tipo_lente === 'multifocal') {
                 if (altura_lente < 24) {
-                    alertas.push({ texto: `Armação muito estreita (${altura_lente} mm) para lente progressiva. A área de leitura ficará cortada.`, tipo: 'error' });
+                    alertas.push({
+                        texto: `Armação muito estreita (${altura_lente} mm) para lente progressiva. A área de leitura ficará cortada.`,
+                        tipo: 'error'
+                    });
                     pontosConforto -= 5;
                     motivosPerda.push('armação inadequada para multifocal');
                 } else if (altura_lente < 28) {
-                    alertas.push({ texto: `Altura da armação (${altura_lente} mm) está no limite mínimo. Conforto de leitura pode ser reduzido.`, tipo: 'warning' });
+                    alertas.push({
+                        texto: `Altura da armação (${altura_lente} mm) está no limite mínimo. Conforto de leitura pode ser reduzido.`,
+                        tipo: 'warning'
+                    });
                     pontosConforto -= 2;
                     motivosPerda.push('campo de perto reduzido');
                 } else {
-                    alertas.push({ texto: `Altura da armação adequada para progressiva.`, tipo: 'ok' });
+                    alertas.push({
+                        texto: `Altura da armação adequada para progressiva.`,
+                        tipo: 'ok'
+                    });
                 }
                 if (angulo_panto > 8) {
-                    alertas.push({ texto: `Armação muito curva (${angulo_panto}°) pode distorcer a visão periférica na lente progressiva.`, tipo: 'warning' });
+                    alertas.push({
+                        texto: `Armação muito curva (${angulo_panto}°) pode distorcer a visão periférica na lente progressiva.`,
+                        tipo: 'warning'
+                    });
                     pontosConforto -= 2;
                     motivosPerda.push('distorção periférica por curvatura');
                 }
@@ -262,7 +561,10 @@
 
             // ---- REGRA 5: Índice alto para grau baixo ----
             if (potencia_total < 2.0 && indice > 1.60) {
-                alertas.push({ texto: `Para grau baixo (${potencia_total.toFixed(1)} D), material ultra fino é desnecessário e encarece.`, tipo: 'warning' });
+                alertas.push({
+                    texto: `Para grau baixo (${potencia_total.toFixed(1)} D), material ultra fino é desnecessário e encarece.`,
+                    tipo: 'warning'
+                });
                 // não penaliza conforto, só custo
             }
 
@@ -289,7 +591,8 @@
             else corBarra = '#fc8181';
 
             let descricaoConforto;
-            if (pontosConforto >= 9) descricaoConforto = 'Excelente – você terá uma experiência visual muito confortável.';
+            if (pontosConforto >= 9) descricaoConforto =
+                'Excelente – você terá uma experiência visual muito confortável.';
             else if (pontosConforto >= 7) descricaoConforto = 'Bom – pequenas observações, mas nada que comprometa.';
             else if (pontosConforto >= 5) descricaoConforto = 'Regular – alguns incômodos podem surgir no dia a dia.';
             else if (pontosConforto >= 3) descricaoConforto = 'Ruim – alta chance de desconforto visual ou estético.';
@@ -304,27 +607,32 @@
             html += `<div class="comfort-label">⭐ Nível de Conforto Estimado</div>`;
             html += `<div class="comfort-scale">`;
             html += `<span style="font-weight:bold">0</span>`;
-            html += `<div class="comfort-bar"><div class="comfort-fill" style="width:${pontosConforto * 10}%; background:${corBarra};"></div></div>`;
+            html +=
+                `<div class="comfort-bar"><div class="comfort-fill" style="width:${pontosConforto * 10}%; background:${corBarra};"></div></div>`;
             html += `<span style="font-weight:bold">10</span>`;
             html += `<span class="comfort-value" style="color:${corBarra}">${pontosConforto}</span>`;
             html += `</div>`;
             html += `<div class="comfort-desc">${descricaoConforto}</div>`;
             if (motivosPerda.length > 0) {
-                html += `<div class="comfort-desc" style="font-size:0.8rem; color:#718096;">Fatores que reduziram o conforto: ${motivosPerda.join(', ')}.</div>`;
+                html +=
+                    `<div class="comfort-desc" style="font-size:0.8rem; color:#718096;">Fatores que reduziram o conforto: ${motivosPerda.join(', ')}.</div>`;
             }
             html += `</div>`;
 
             html += `<h2>📋 Análise Detalhada</h2>`;
             alertas.forEach(a => {
-                const classeAlerta = a.tipo === 'ok' ? 'alert-ok' : (a.tipo === 'warning' ? 'alert-warning' : 'alert-error');
+                const classeAlerta = a.tipo === 'ok' ? 'alert-ok' : (a.tipo === 'warning' ? 'alert-warning' :
+                    'alert-error');
                 const icone = a.tipo === 'ok' ? '✅' : (a.tipo === 'warning' ? '⚠️' : '❌');
-                html += `<div class="alert-item ${classeAlerta}"><span class="alert-icon">${icone}</span><span class="alert-text">${a.texto}</span></div>`;
+                html +=
+                    `<div class="alert-item ${classeAlerta}"><span class="alert-icon">${icone}</span><span class="alert-text">${a.texto}</span></div>`;
             });
 
             html += `<div class="details-box"><strong>📐 Detalhes técnicos:</strong><br>`;
             html += `• Espessura máxima estimada: <strong>${espessura.toFixed(1)} mm</strong><br>`;
             html += `• Grau total (esfera + cilindro): <strong>${potencia_total.toFixed(2)} D</strong><br>`;
-            html += `• Efeito no tamanho do olho: <strong>${((magnificacao - 1) * 100).toFixed(0)}%</strong> (magnificação ${magnificacao.toFixed(2)}x)<br>`;
+            html +=
+                `• Efeito no tamanho do olho: <strong>${((magnificacao - 1) * 100).toFixed(0)}%</strong> (magnificação ${magnificacao.toFixed(2)}x)<br>`;
             html += `• Diâmetro mínimo do bloco: <strong>${diametro_minimo.toFixed(1)} mm</strong><br>`;
             html += `</div>`;
 
@@ -332,4 +640,5 @@
         }
     </script>
 </body>
+
 </html>
