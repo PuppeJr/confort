@@ -262,6 +262,84 @@
         .details-box strong {
             color: #2d3748;
         }
+
+        .camera-section {
+            margin: 20px 0;
+            padding: 16px;
+            border: 1px solid #bee3f8;
+            border-radius: 12px;
+            background: #ebf8ff;
+        }
+
+        .camera-section h2 {
+            color: #1a365d;
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+
+        .camera-help {
+            color: #2c5282;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .camera-preview {
+            display: none;
+            position: relative;
+            max-width: 480px;
+            margin: 0 auto 12px;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #1a202c;
+        }
+
+        .camera-preview video,
+        .camera-preview canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1);
+        }
+
+        .camera-preview canvas {
+            position: absolute;
+            inset: 0;
+        }
+
+        .camera-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .camera-actions button {
+            flex: 1 1 180px;
+            margin: 0;
+            padding: 11px;
+            font-size: 0.95rem;
+        }
+
+        .camera-actions button.secondary {
+            background: #4a5568;
+        }
+
+        .camera-status {
+            margin-top: 10px;
+            color: #2d3748;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        .camera-result {
+            margin-top: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #bee3f8;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -352,6 +430,27 @@
             <button type="submit">🔍 Analisar Compatibilidade e Conforto</button>
         </form>
 
+        <section class="camera-section" aria-labelledby="cameraTitle">
+            <h2 id="cameraTitle">📷 Analisar proporções do rosto com a câmera</h2>
+            <p class="camera-help">
+                Posicione o rosto de frente, com boa iluminação. Nesta primeira versão, a câmera mede apenas
+                proporções faciais e posição dos olhos; ela ainda não identifica automaticamente o contorno da armação.
+            </p>
+            <div id="cameraPreview" class="camera-preview">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="cameraOverlay"></canvas>
+            </div>
+            <div class="camera-actions">
+                <button id="startCameraButton" type="button">📷 Iniciar câmera</button>
+                <button id="measureFaceButton" type="button" class="secondary" disabled>📏 Medir meu rosto</button>
+                <button id="stopCameraButton" type="button" class="secondary" hidden>⏹ Parar câmera</button>
+            </div>
+            <div id="cameraStatus" class="camera-status" role="status">
+                A câmera só será acessada depois que você clicar em “Iniciar câmera”.
+            </div>
+            <div id="cameraResult" class="camera-result" hidden></div>
+        </section>
+
         <div id="resultado"></div>
     </div>
 
@@ -360,6 +459,228 @@
             event.preventDefault();
             analisar();
         });
+
+        const cameraState = {
+            stream: null,
+            landmarker: null,
+            animationFrame: null,
+            lastLandmarks: null,
+            loading: false
+        };
+
+        const cameraVideo = document.getElementById('cameraVideo');
+        const cameraOverlay = document.getElementById('cameraOverlay');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const cameraResult = document.getElementById('cameraResult');
+        const startCameraButton = document.getElementById('startCameraButton');
+        const measureFaceButton = document.getElementById('measureFaceButton');
+        const stopCameraButton = document.getElementById('stopCameraButton');
+
+        startCameraButton.addEventListener('click', iniciarCamera);
+        measureFaceButton.addEventListener('click', medirProporcoesFaciais);
+        stopCameraButton.addEventListener('click', pararCamera);
+
+        async function carregarDetectorFacial() {
+            const vision = await import(
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm'
+            );
+            const filesetResolver = await vision.FilesetResolver.forVisionTasks(
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm'
+            );
+            const opcoes = {
+                baseOptions: {
+                    modelAssetPath:
+                        'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
+                },
+                runningMode: 'VIDEO',
+                numFaces: 1,
+                minFaceDetectionConfidence: 0.6,
+                minFacePresenceConfidence: 0.6,
+                minTrackingConfidence: 0.6,
+                outputFaceBlendshapes: false,
+                outputFacialTransformationMatrixes: false
+            };
+
+            try {
+                return await vision.FaceLandmarker.createFromOptions(filesetResolver, {
+                    ...opcoes,
+                    baseOptions: { ...opcoes.baseOptions, delegate: 'GPU' }
+                });
+            } catch (gpuError) {
+                console.warn('GPU indisponível; usando processamento na CPU:', gpuError);
+                return vision.FaceLandmarker.createFromOptions(filesetResolver, opcoes);
+            }
+        }
+
+        async function iniciarCamera() {
+            if (cameraState.loading || cameraState.stream) return;
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                cameraStatus.textContent = 'Seu navegador não oferece acesso à câmera. Use um navegador atualizado em HTTPS.';
+                return;
+            }
+
+            cameraState.loading = true;
+            startCameraButton.disabled = true;
+            cameraStatus.textContent = 'Carregando o detector facial e solicitando acesso à câmera...';
+
+            try {
+                cameraState.landmarker = await carregarDetectorFacial();
+                cameraState.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                cameraVideo.srcObject = cameraState.stream;
+                await cameraVideo.play();
+                cameraPreview.style.display = 'block';
+                measureFaceButton.disabled = false;
+                stopCameraButton.hidden = false;
+                cameraStatus.textContent = 'Centralize o rosto no quadro e mantenha os olhos visíveis.';
+                acompanharRosto();
+            } catch (error) {
+                console.error('Falha ao iniciar análise facial:', error);
+                cameraStatus.textContent =
+                    'Não foi possível iniciar a câmera. Verifique a permissão do navegador e se a página está em HTTPS.';
+                cameraState.landmarker = null;
+                if (cameraState.stream) pararCamera();
+            } finally {
+                cameraState.loading = false;
+                startCameraButton.disabled = false;
+            }
+        }
+
+        function acompanharRosto() {
+            if (!cameraState.stream || !cameraState.landmarker) return;
+
+            if (cameraVideo.readyState >= 2) {
+                const resultadoFacial = cameraState.landmarker.detectForVideo(cameraVideo, performance.now());
+                cameraState.lastLandmarks = resultadoFacial.faceLandmarks?.[0] || null;
+                desenharPontosFaciais(cameraState.lastLandmarks);
+            }
+            cameraState.animationFrame = requestAnimationFrame(acompanharRosto);
+        }
+
+        function desenharPontosFaciais(landmarks) {
+            const contexto = cameraOverlay.getContext('2d');
+            cameraOverlay.width = cameraVideo.videoWidth;
+            cameraOverlay.height = cameraVideo.videoHeight;
+            contexto.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+            if (!landmarks) return;
+
+            contexto.fillStyle = '#48bb78';
+            [10, 234, 454, 468, 473].forEach((indice) => {
+                const ponto = landmarks[indice];
+                if (!ponto) return;
+                contexto.beginPath();
+                contexto.arc(
+                    ponto.x * cameraOverlay.width,
+                    ponto.y * cameraOverlay.height,
+                    Math.max(3, cameraOverlay.width / 180),
+                    0,
+                    Math.PI * 2
+                );
+                contexto.fill();
+            });
+        }
+
+        function distanciaPontos(primeiro, segundo) {
+            return Math.hypot(segundo.x - primeiro.x, segundo.y - primeiro.y);
+        }
+
+        function formatarMedida(valor) {
+            return `${valor.toFixed(1).replace('.', ',')} mm`;
+        }
+
+        function medirProporcoesFaciais() {
+            const landmarks = cameraState.lastLandmarks;
+            const dnp = parseFloat(document.getElementById('dnp').value);
+            const larguraLente = parseFloat(document.getElementById('largura_lente').value);
+            const ponte = parseFloat(document.getElementById('ponte').value);
+
+            if (!landmarks) {
+                cameraStatus.textContent = 'Nenhum rosto foi detectado. Ajuste a iluminação e olhe diretamente para a câmera.';
+                return;
+            }
+            if (!Number.isFinite(dnp) || dnp <= 0) {
+                cameraStatus.textContent = 'Informe uma distância entre pupilas válida antes de medir.';
+                return;
+            }
+
+            const olhoEsquerdo = landmarks[468] || landmarks[133];
+            const olhoDireito = landmarks[473] || landmarks[362];
+            const ladoEsquerdo = landmarks[234];
+            const ladoDireito = landmarks[454];
+            const topo = landmarks[10];
+            const queixo = landmarks[152];
+            const distanciaPupilarPixels = distanciaPontos(olhoEsquerdo, olhoDireito);
+            const escalaMmPorPixel = dnp / distanciaPupilarPixels;
+            const larguraRosto = distanciaPontos(ladoEsquerdo, ladoDireito) * escalaMmPorPixel;
+            const alturaRosto = distanciaPontos(topo, queixo) * escalaMmPorPixel;
+            const larguraTotalArmacao = larguraLente + ponte + larguraLente;
+            const diferencaArmacao = larguraTotalArmacao - larguraRosto;
+            const alinhamento = Math.abs(
+                distanciaPontos(olhoEsquerdo, olhoDireito) * escalaMmPorPixel - dnp
+            );
+
+            let pontos = 10;
+            const observacoes = [];
+            if (Math.abs(diferencaArmacao) > 8) {
+                pontos -= 3;
+                observacoes.push(
+                    diferencaArmacao > 0
+                        ? 'a armação informada parece larga para a proporção facial'
+                        : 'a armação informada parece estreita para a proporção facial'
+                );
+            } else if (Math.abs(diferencaArmacao) > 4) {
+                pontos -= 1;
+                observacoes.push('a largura da armação está próxima do limite recomendado');
+            } else {
+                observacoes.push('a largura total informada é compatível com a proporção facial estimada');
+            }
+
+            if (larguraLente <= 0 || ponte < 0) {
+                pontos -= 2;
+                observacoes.push('confira as medidas da armação');
+            }
+
+            pontos = Math.max(0, Math.min(10, pontos));
+            const classe = pontos >= 8 ? 'overall-compatible' : pontos >= 5 ? 'overall-attention' : 'overall-incompatible';
+            const titulo = pontos >= 8 ? '✅ Boa proporção estimada' : pontos >= 5 ? '⚠️ Requer conferência' : '❌ Proporção possivelmente inadequada';
+
+            cameraResult.hidden = false;
+            cameraResult.innerHTML = `
+                <strong>${titulo} — ${pontos}/10</strong><br>
+                Largura estimada do rosto: <strong>${formatarMedida(larguraRosto)}</strong><br>
+                Altura estimada do rosto: <strong>${formatarMedida(alturaRosto)}</strong><br>
+                Largura total informada da armação: <strong>${formatarMedida(larguraTotalArmacao)}</strong><br>
+                DNP usada como escala: <strong>${formatarMedida(dnp)}</strong><br>
+                <span>${observacoes.join('. ')}.</span>
+                <div class="overall-status ${classe}" style="margin:10px 0 0;padding:8px;font-size:0.82rem;">
+                    ${Math.abs(alinhamento) < 1 ? '✅' : 'ℹ️'} A medição facial foi concluída.
+                </div>
+                <small>Estimativa baseada na DNP informada e nos pontos faciais detectados. Não substitui a medição em ótica.</small>
+            `;
+            cameraStatus.textContent = 'Medição concluída. Você pode ajustar as medidas da armação e medir novamente.';
+        }
+
+        function pararCamera() {
+            if (cameraState.animationFrame) cancelAnimationFrame(cameraState.animationFrame);
+            if (cameraState.stream) {
+                cameraState.stream.getTracks().forEach((track) => track.stop());
+            }
+            cameraState.stream = null;
+            cameraState.lastLandmarks = null;
+            cameraVideo.srcObject = null;
+            cameraPreview.style.display = 'none';
+            measureFaceButton.disabled = true;
+            stopCameraButton.hidden = true;
+            cameraStatus.textContent = 'Câmera encerrada. Clique em “Iniciar câmera” para medir novamente.';
+        }
 
         function estimar_espessura(potencia_total, diametro, indice) {
             const r = diametro / 2;

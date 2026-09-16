@@ -11,6 +11,7 @@ O **Confort** é um analisador de compatibilidade e conforto visual que ajuda vo
 - 👁️ Calcular como seus olhos aparecerão (magnificação estética)
 - 🔍 Identificar problemas potenciais antes de encomendar os óculos
 - ⭐ Receber um score de conforto de 0 a 10
+- 📷 Estimar proporções do rosto usando a câmera do dispositivo
 
 ## 🚀 Como Usar
 
@@ -38,6 +39,11 @@ O **Confort** é um analisador de compatibilidade e conforto visual que ajuda vo
    - Score de conforto visual (0-10)
    - Análise detalhada de cada fator
    - Detalhes técnicos da combinação
+
+6. Opcionalmente, clique em **"📷 Iniciar câmera"** para medir as proporções faciais:
+   - Permita o acesso à câmera
+   - Posicione o rosto de frente e clique em **"📏 Medir meu rosto"**
+   - Confira a largura e a altura estimadas do rosto e a comparação com a armação informada
 
 ## 📊 Critérios Analisados
 
@@ -69,6 +75,7 @@ O **Confort** é um analisador de compatibilidade e conforto visual que ajuda vo
 - **HTML5** com semântica completa
 - **CSS3** responsivo e moderno
 - **JavaScript puro** (vanilla JS) sem dependências
+- **MediaPipe Face Landmarker** carregado no navegador para detectar pontos faciais
 - **Hospedagem**: Vercel
 - Cálculos ópticos baseados em fórmulas de ótica oftalmológica
 
@@ -108,6 +115,8 @@ A aplicação é totalmente responsiva e funciona em:
 - Consulte sempre um oftalmologista para prescrições e recomendações finais.
 - Os cálculos são estimativas baseadas em óptica oftalmológica padrão.
 - Diferentes fabricantes podem ter variações em suas medidas.
+- A análise da câmera usa a DNP informada como referência de escala e não substitui uma medição profissional.
+- Nesta primeira versão, a câmera mede proporções faciais; a identificação automática do contorno dos óculos será adicionada posteriormente.
 
 ## 🎯 Interpretação dos Resultados
 
